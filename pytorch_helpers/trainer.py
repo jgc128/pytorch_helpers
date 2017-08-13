@@ -9,15 +9,16 @@ import torch.utils.data
 
 from tqdm import tqdm
 
-from pytorch_helpers.helpers import variable, cuda
+from pytorch_helpers.helpers import variable, cuda, save_weights
 
 
 class PyTorchTrainer(object):
-    def __init__(self, model, loss, **kwargs):
+    def __init__(self, model, loss, checkpoint_filename=None, **kwargs):
         super(PyTorchTrainer, self).__init__()
 
         self.model = model
         self.loss = loss
+        self.checkpoint_filename = checkpoint_filename
 
     def fit(self, data_set_train, nb_epochs=10, batch_size=64, optimizer=None, data_set_val=None):
         if optimizer is None:
@@ -39,6 +40,7 @@ class PyTorchTrainer(object):
         loss_fn = cuda(self.loss)
 
         j = 1
+        loss_best = np.inf
         for epoch in range(nb_epochs):
             for phase, data_loader in zip(phases, data_loaders):
                 if phase == 'train':
@@ -47,12 +49,13 @@ class PyTorchTrainer(object):
                     model.train(False)
 
                 pbar_desc = f'Epoch {epoch}, {phase}'
-                pbar = tqdm(total=len(data_loader.dataset), desc=pbar_desc, postfix={'loss': 0}, ncols=120)
+                pbar = tqdm(total=len(data_loader.dataset), desc=pbar_desc, postfix={f'loss_{phase}': 0}, ncols=120)
 
                 running_loss = 0.0
                 for j, (inputs, targets) in enumerate(data_loader, 1):
-                    inputs = variable(inputs)
-                    targets = variable(targets)
+                    volatile = phase == 'val'
+                    inputs = variable(inputs, volatile=volatile)
+                    targets = variable(targets, volatile=volatile)
 
                     # zero the parameter gradients
                     optimizer.zero_grad()
@@ -69,7 +72,7 @@ class PyTorchTrainer(object):
                     running_loss += loss.data[0]
 
                     pbar.update(inputs.size(0))
-                    pbar.set_postfix(loss=running_loss / j)
+                    pbar.set_postfix(**{f'loss_{phase}': running_loss / j})
 
                     del loss
                     del outputs
@@ -77,6 +80,10 @@ class PyTorchTrainer(object):
 
                 pbar.close()
                 epoch_loss = running_loss / j
+
+                if phase == 'val' and epoch_loss < loss_best and self.checkpoint_filename is not None:
+                    save_weights(model, self.checkpoint_filename)
+                    loss_best = epoch_loss
 
     def predict(self, data_loader):
         pass

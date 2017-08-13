@@ -31,6 +31,9 @@ def set_variable_repr():
 
 
 def restore_weights(model, filename):
+    if not isinstance(filename, str):
+        filename = str(filename)
+
     map_location = None
 
     # load trained on GPU models to CPU
@@ -39,9 +42,24 @@ def restore_weights(model, filename):
 
     state_dict = torch.load(filename, map_location=map_location)
 
+    if isinstance(model, torch.nn.DataParallel):
+        model = model.module
+
     model.load_state_dict(state_dict)
 
-    logging.info(f'Model restored {os.path.basename(filename)}')
+    logging.info(f'Model restored: {os.path.basename(filename)}')
+
+
+def save_weights(model, filename):
+    if not isinstance(filename, str):
+        filename = str(filename)
+
+    if isinstance(model, torch.nn.DataParallel):
+        model = model.module
+
+    torch.save(model.state_dict(), filename)
+
+    logging.info(f'Model saved: {os.path.basename(filename)}')
 
 
 def load_image(filename, grayscale=False):
