@@ -27,16 +27,19 @@ class BaseImageMaskTransformer(object):
     def transform(self, image, mode):
         """Transform the provided object"""
 
-    def __call__(self, image, mask):
+    def __call__(self, image, mask=None):
         if np.random.rand() >= self.p or self.apply_always:
 
             if self.apply_image:
                 image = self.transform(image, mode=ImageMaskTransformMode.Image)
 
-            if self.apply_mask and isinstance(mask, np.ndarray):
+            if self.apply_mask and mask is not None and isinstance(mask, np.ndarray):
                 mask = self.transform(mask, mode=ImageMaskTransformMode.Mask)
 
-        return image, mask
+        if mask is None:
+            return image
+        else:
+            return image, mask
 
 
 class RandomVerticalFlip(BaseImageMaskTransformer):
