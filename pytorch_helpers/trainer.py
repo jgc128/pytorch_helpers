@@ -9,18 +9,26 @@ import torch.utils.data
 
 from tqdm import tqdm
 
+from pytorch_helpers.crayon import get_crayon_experiment
 from pytorch_helpers.helpers import variable, cuda, save_weights
 
 
 class PyTorchTrainer(object):
-    def __init__(self, model, loss, checkpoint_filename=None, **kwargs):
+    def __init__(self, model, loss, checkpoint_filename=None, crayon_exp_name=None, **kwargs):
         super(PyTorchTrainer, self).__init__()
 
         self.model = model
         self.loss = loss
+
         self.checkpoint_filename = checkpoint_filename
+        self.crayon_exp_name = crayon_exp_name
+
+        self._crayon_exp = None
 
     def fit(self, data_set_train, nb_epochs=10, batch_size=64, optimizer=None, data_set_val=None):
+        if self._crayon_exp is None and self.crayon_exp_name is not None:
+            self._crayon_exp = get_crayon_experiment(self.crayon_exp_name)
+
         if optimizer is None:
             optimizer = torch.optim.Adam(self.model.parameters())
 
@@ -69,17 +77,26 @@ class PyTorchTrainer(object):
                         loss.backward()
                         optimizer.step()
 
-                    running_loss += loss.data[0]
+                    batch_loss = loss.data[0]
+                    running_loss += batch_loss
 
                     pbar.update(inputs.size(0))
-                    pbar.set_postfix(**{f'loss_{phase}': running_loss / j})
+
+                    pbar.set_postfix(**{f'loss_{phase}': batch_loss})
+
+                    if self._crayon_exp is not None:
+                        self._crayon_exp.add_scalar_value(f'loss_batch/{phase}', batch_loss)
 
                     del loss
                     del outputs
                     del targets
 
-                pbar.close()
                 epoch_loss = running_loss / j
+                pbar.set_postfix(**{f'loss_{phase}': epoch_loss})
+                pbar.close()
+
+                if self._crayon_exp is not None:
+                    self._crayon_exp.add_scalar_value(f'loss_epoch/{phase}', epoch_loss)
 
                 if phase == 'val' and epoch_loss < loss_best and self.checkpoint_filename is not None:
                     save_weights(model, self.checkpoint_filename)
