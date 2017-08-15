@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import torch.nn
 import torch.utils.data
+import torch.optim.lr_scheduler
 
 from tqdm import tqdm
 
@@ -25,12 +26,17 @@ class PyTorchTrainer(object):
 
         self._crayon_exp = None
 
-    def fit(self, data_set_train, nb_epochs=10, batch_size=64, optimizer=None, data_set_val=None):
+    def fit(self, data_set_train, nb_epochs=10, batch_size=64, optimizer=None, lr=0.001, lr_step_size=0,
+            data_set_val=None):
         if self._crayon_exp is None and self.crayon_exp_name is not None:
             self._crayon_exp = get_crayon_experiment(self.crayon_exp_name)
 
         if optimizer is None:
-            optimizer = torch.optim.Adam(self.model.parameters())
+            optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
+
+        lr_scheduler = None
+        if lr_step_size != 0:
+            lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=lr_step_size, gamma=0.5)
 
         data_loader_train = torch.utils.data.DataLoader(data_set_train, batch_size=batch_size, shuffle=True,
                                                         num_workers=1, pin_memory=torch.cuda.is_available())
@@ -55,6 +61,12 @@ class PyTorchTrainer(object):
                     model.train(True)
                 else:
                     model.train(False)
+
+                if phase == 'train' and lr_scheduler is not None:
+                    lr_scheduler.step()
+                    if self._crayon_exp is not None:
+                        lr = optimizer.param_groups[0]['lr']
+                        self._crayon_exp.add_scalar_value(f'learning_rate', lr)
 
                 pbar_desc = f'Epoch {epoch}, {phase}'
                 pbar = tqdm(total=len(data_loader.dataset), desc=pbar_desc, postfix={f'loss_{phase}': 0}, ncols=120)
