@@ -26,8 +26,8 @@ class PyTorchTrainer(object):
 
         self._crayon_exp = None
 
-    def fit(self, data_set_train, nb_epochs=10, batch_size=64, optimizer=None, lr=0.001, lr_step_size=0,
-            data_set_val=None):
+    def fit(self, dataset_train, nb_epochs=10, batch_size=64, optimizer=None, lr=0.001, lr_step_size=0,
+            dataset_val=None):
         if self._crayon_exp is None and self.crayon_exp_name is not None:
             self._crayon_exp = get_crayon_experiment(self.crayon_exp_name)
 
@@ -38,13 +38,13 @@ class PyTorchTrainer(object):
         if lr_step_size != 0:
             lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=lr_step_size, gamma=0.5)
 
-        data_loader_train = torch.utils.data.DataLoader(data_set_train, batch_size=batch_size, shuffle=True,
+        data_loader_train = torch.utils.data.DataLoader(dataset_train, batch_size=batch_size, shuffle=True,
                                                         num_workers=1, pin_memory=torch.cuda.is_available())
 
         phases = ['train', ]
         data_loaders = [data_loader_train]
-        if data_set_val is not None:
-            data_loader_val = torch.utils.data.DataLoader(data_set_val, batch_size=batch_size, shuffle=False,
+        if dataset_val is not None:
+            data_loader_val = torch.utils.data.DataLoader(dataset_val, batch_size=batch_size, shuffle=False,
                                                           num_workers=1, pin_memory=torch.cuda.is_available())
 
             phases.append('val')
