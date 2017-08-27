@@ -64,9 +64,6 @@ class PyTorchTrainer(object):
 
                 if phase == 'train' and lr_scheduler is not None:
                     lr_scheduler.step()
-                    if self._crayon_exp is not None:
-                        lr = optimizer.param_groups[0]['lr']
-                        self._crayon_exp.add_scalar_value(f'learning_rate', lr)
 
                 pbar_desc = f'Epoch {epoch}, {phase}'
                 pbar = tqdm(total=len(data_loader.dataset), desc=pbar_desc, postfix={f'loss_{phase}': 0}, ncols=120)
@@ -98,6 +95,9 @@ class PyTorchTrainer(object):
 
                     if self._crayon_exp is not None:
                         self._crayon_exp.add_scalar_value(f'loss_batch/{phase}', batch_loss)
+
+                        lr = optimizer.param_groups[0]['lr']
+                        self._crayon_exp.add_scalar_value(f'learning_rate', lr)
 
                     del loss
                     del outputs

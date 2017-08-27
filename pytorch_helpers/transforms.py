@@ -198,6 +198,27 @@ class Rotate90n(BaseImageMaskTransformer):
         return image
 
 
+class Scale(BaseImageMaskTransformer):
+    def __init__(self, from_val=0.8, to_val=1.2, mode='reflect', **kwargs):
+        super(Scale, self).__init__(**kwargs)
+
+        self.from_val = from_val
+        self.to_val = to_val
+        self.mode = mode
+
+        self._augmentor = iaa.Affine(scale=1.0, mode=self.mode)
+
+    def transform(self, image, mode):
+        # sample angle
+        if mode == ImageMaskTransformMode.Image:
+            scale = np.random.uniform(self.from_val, self.to_val)
+            self._augmentor.scale = Deterministic(scale)
+
+        image = self._augmentor.augment_image(image)
+
+        return image
+
+
 class MakeBorder(BaseImageMaskTransformer):
     def __init__(self, border_size, **kwargs):
         super(MakeBorder, self).__init__(**kwargs)
