@@ -223,14 +223,19 @@ class MakeBorder(BaseImageMaskTransformer):
     def __init__(self, border_size, **kwargs):
         super(MakeBorder, self).__init__(**kwargs)
 
+        if not isinstance(border_size, tuple):
+            border_size = (border_size, border_size, border_size, border_size)
+
         self.border_size = border_size
 
         self.apply_always = True
         self.apply_mask = False
 
     def transform(self, image, mode):
-        image = cv2.copyMakeBorder(image, self.border_size, self.border_size, self.border_size, self.border_size,
-                                   cv2.BORDER_REFLECT)
+        image = cv2.copyMakeBorder(
+            image, self.border_size[0], self.border_size[1], self.border_size[2], self.border_size[3],
+            cv2.BORDER_REFLECT
+        )
 
         return image
 
