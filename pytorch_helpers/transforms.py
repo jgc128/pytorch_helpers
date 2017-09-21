@@ -251,13 +251,32 @@ class ImageMaskTransformsCompose(object):
         return image, mask
 
 
+class Normalize(object):
+    def __init__(self, mean, std, divide=True):
+        super(Normalize, self).__init__()
+
+        self.divide = divide
+        self.mean = np.reshape(np.array(mean, dtype=np.float32), (1, 1, -1))
+        self.std = np.reshape(np.array(std, dtype=np.float32), (1, 1, -1))
+
+    def __call__(self, data):
+        if self.divide:
+            data = np.divide(data, 255, dtype=np.float32)
+
+        data = np.subtract(data, self.mean, out=data)
+        data = np.divide(data, self.std, out=data)
+
+        return data
+
+
 class ToTensor(object):
-    def __init__(self, divide=False, transpose=False, contiguous=True):
+    def __init__(self, divide=False, transpose=False, contiguous=False, to_torch=False):
         super(ToTensor, self).__init__()
 
         self.divide = divide
         self.transpose = transpose
         self.contiguous = contiguous
+        self.to_torch = to_torch
 
     def __call__(self, data):
         if self.transpose:
@@ -266,9 +285,10 @@ class ToTensor(object):
         if self.contiguous:
             data = np.ascontiguousarray(data)
 
-        data = torch.from_numpy(data).float()
-
         if self.divide:
-            data = data.div(255)
+            data = np.divide(data, 255, dtype=np.float32)
+
+        if self.to_torch:
+            data = torch.from_numpy(data).float()
 
         return data
