@@ -14,6 +14,10 @@ def get_crayon_experiment(exp_name, hostname='127.0.0.1', overwrite=True):
         else:
             cc_exp = cc.open_experiment(exp_name)
     else:
-        cc_exp = cc.create_experiment(exp_name)
+        try:
+            cc_exp = cc.create_experiment(exp_name)
+        except ValueError:
+            cc.remove_experiment(exp_name)
+            cc_exp = cc.create_experiment(exp_name)
 
     return cc_exp
