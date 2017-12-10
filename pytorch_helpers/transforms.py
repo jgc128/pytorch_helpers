@@ -113,8 +113,12 @@ class SamplePatch(BaseImageMaskTransformer):
             max_height = image_height - self.patch_size
             max_width = image_width - self.patch_size
 
-            self._patch_coordinate_h = np.random.randint(0, max_height)
-            self._patch_coordinate_w = np.random.randint(0, max_width)
+            try:
+                self._patch_coordinate_h = np.random.randint(0, max_height)
+                self._patch_coordinate_w = np.random.randint(0, max_width)
+            except ValueError as e:
+                print(image.shape, '->', self.patch_size)
+                raise e
 
         c_h = (self._patch_coordinate_h, self._patch_coordinate_h + self.patch_size)
         c_w = (self._patch_coordinate_w, self._patch_coordinate_w + self.patch_size)
@@ -236,6 +240,35 @@ class MakeBorder(BaseImageMaskTransformer):
             image, self.border_size[0], self.border_size[1], self.border_size[2], self.border_size[3],
             cv2.BORDER_REFLECT
         )
+
+        return image
+
+
+class Squarify(BaseImageMaskTransformer):
+    def __init__(self, **kwargs):
+        super(Squarify, self).__init__(**kwargs)
+
+        self.apply_always = True
+
+    def transform(self, image, mode):
+        image_size = (image.shape[0], image.shape[1])
+        target_size = min(image_size)
+
+        crops = []
+        for image_side_size in image_size:
+            if image_side_size <= target_size:
+                crops.append((0, 0))
+                continue
+
+            crop_total = image_side_size - target_size
+            crop_before = crop_total // 2
+            crop_after = image_side_size - target_size - crop_before
+            crops.append((crop_before, crop_after))
+
+        crops.extend([(0, 0) for i in range(len(image.shape) - 2)])
+
+        slices = [slice(a, image.shape[i] - b) for i, (a, b) in enumerate(crops)]
+        image = image[slices]
 
         return image
 
