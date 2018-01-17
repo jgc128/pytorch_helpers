@@ -20,6 +20,9 @@ def variable(obj, volatile=False):
     if isinstance(obj, (list, tuple)):
         return [variable(o, volatile=volatile) for o in obj]
 
+    if isinstance(obj, np.ndarray):
+        obj = torch.from_numpy(obj)
+
     obj = cuda(obj)
     obj = Variable(obj, volatile=volatile)
     return obj
